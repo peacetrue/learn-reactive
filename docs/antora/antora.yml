@@ -1,6 +1,9 @@
-name: peacetrue-template-gradle
-title: gradle 模板项目
+name: learn-reactive
+title: 学习反应式编程
 version: master
 start_page: ROOT:index.adoc
+asciidoc:
+  attributes:
+    numbered: ''
 nav:
   - modules/ROOT/nav.adoc

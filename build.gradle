@@ -16,9 +16,9 @@ buildscript {
 
 allprojects { project ->
 
-    group "com.github.peacetrue.template"
+    group "com.github.peacetrue.learn.reactive"
     version "1.0.0-SNAPSHOT"
-    description "gradle模板"
+    description "学习反应式编程"
 
     apply plugin: "java"
     apply plugin: "java-library"
@@ -43,6 +43,7 @@ allprojects { project ->
         compileOnly "org.projectlombok:lombok"
         annotationProcessor "org.projectlombok:lombok"
         implementation "com.google.code.findbugs:jsr305"
+        implementation "ch.qos.logback:logback-classic"
 
         testImplementation 'org.junit.jupiter:junit-jupiter-api'
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'

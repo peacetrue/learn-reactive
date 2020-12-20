@@ -1,0 +1,172 @@
+= 反应式编程的推演过程
+
+本文简单介绍【反应式编程的推演过程】。
+
+以下通过一个吃饭流程的例子描述此过程。假设吃饭流程包括 4 个步骤：
+
+* 买菜，10 分钟
+* 煮饭，15 分钟
+* 做菜，10 分钟
+* 吃饭，10 分钟
+
+现实生活的中的分钟，在代码实现中表述为毫秒，这样方便测试。
+
+== 串行编程
+
+以下通过串行编程实现吃饭流程。
+
+image::serial.png[]
+
+.吃饭流程涉及的基本方法
+[source%nowrap,java]
+----
+@Slf4j
+public class MealProcess {
+
+    public static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            log.warn("sleep interrupted", e);
+        }
+    }
+
+    public String buyFood() {
+        log.info("买菜");
+        sleep(10);
+        return "生的菜";
+    }
+
+    public String cookRice() {
+        log.info("煮饭");
+        sleep(15);
+        return "熟的饭";
+    }
+
+    public String cookFood(String food) {
+        log.info("做菜");
+        sleep(10);
+        return "熟的菜";
+    }
+
+    public void eat(String rice, String food) {
+        log.info("吃饭");
+        sleep(10);
+    }
+}
+----
+
+.吃饭流程串行实现
+[source%nowrap,java]
+----
+@Slf4j
+class MealProcessTest {
+
+    @Test
+    void serial() {
+        MealProcess mealProcess = new MealProcess();
+        long start = System.currentTimeMillis();
+        String food = mealProcess.buyFood();
+        String rice = mealProcess.cookRice();
+        String cookFood = mealProcess.cookFood(food);
+        mealProcess.eat(rice, cookFood);
+        log.info("吃饭流程（串行）共花费 {} 毫秒", System.currentTimeMillis() - start);
+        // 吃饭流程（串行）共花费 56 毫秒
+    }
+}
+----
+
+串行编程具有简单易读的优点，考虑到做饭和买菜、做菜可以并行执行，这样花费时间会比串行少。
+
+== 并行编程
+
+以下通过并行编程实现吃饭流程。
+
+image::paiallel.png[]
+
+并行编程会涉及到多线程，也有多种实现方式，以下逐一说明。
+
+=== 回调方式
+
+首先，简单地创建一个回调处理器：
+
+.CallbackHandler
+[source%nowrap,java]
+----
+public interface CallbackHandler<T> {
+
+    void onSuccess(T result);
+
+    default void onError(Exception exception) {
+    }
+
+    default void onComplete() {
+    }
+
+    static <T> void invoke(Supplier<T> action, CallbackHandler<T> handler) {
+        new Thread(() -> {
+            try {
+                handler.onSuccess(action.get());
+            } catch (Exception exception) {
+                handler.onError(exception);
+            } finally {
+                handler.onComplete();
+            }
+        }).start();
+    }
+}
+----
+
+然后开始处理吃饭流程：
+
+.paiallelCallback
+----
+@Test
+void paiallelCallback() throws Exception {
+    MealProcess mealProcess = new MealProcess();
+    //买菜
+    CallbackHandler.invoke(mealProcess::buyFood, new CallbackHandler<String>() {
+        public void onSuccess(String food) {
+            //买好菜了，开始做菜
+            CallbackHandler.invoke(() -> mealProcess.cookFood(food), new CallbackHandler<String>() {
+                public void onSuccess(String result) {
+                    //想吃饭？除非饭做好了
+                    //...
+                }
+            });
+        }
+    });
+
+    //做饭
+    CallbackHandler.invoke(mealProcess::cookRice, new CallbackHandler<String>() {
+        @Override
+        public void onSuccess(String result) {
+            //想吃饭？除非菜做好了
+            //...
+        }
+    });
+}
+----
+
+菜和饭都做好了才能开吃，需要在主线程中共享回调处理结果。
+
+添加一个回调结果类：
+
+.CallbackHandler
+[source%nowrap,java]
+----
+@Data
+@ToString
+public class CallbackResult<T> {
+
+    private volatile boolean completed;
+    private T value;
+    private Exception exception;
+
+    public boolean isSuccess() {
+        return completed && exception == null;
+    }
+}
+----
+
+
