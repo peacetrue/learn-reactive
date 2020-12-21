@@ -44,6 +44,7 @@ allprojects { project ->
         annotationProcessor "org.projectlombok:lombok"
         implementation "com.google.code.findbugs:jsr305"
         implementation "ch.qos.logback:logback-classic"
+        implementation 'io.projectreactor:reactor-core:3.4.1'
 
         testImplementation 'org.junit.jupiter:junit-jupiter-api'
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
@@ -54,7 +55,8 @@ allprojects { project ->
         testCompileOnly "org.projectlombok:lombok"
         testAnnotationProcessor "org.projectlombok:lombok"
         testImplementation "ch.qos.logback:logback-classic"
-        testImplementation 'io.projectreactor:reactor-test'
+        testImplementation 'io.projectreactor:reactor-test:3.4.1'
+        testImplementation 'io.projectreactor.tools:blockhound:1.0.4.RELEASE'
         testImplementation 'org.unitils:unitils-core'
         testImplementation 'org.jeasy:easy-random-core'
         testImplementation 'org.yaml:snakeyaml'

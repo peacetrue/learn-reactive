@@ -1,2 +1,7 @@
 = 简介
 
+
+== 参考资料
+
+* https://github.com/reactor/reactor-core[Reactor Core Github^]
+* https://projectreactor.io/docs/core/release/reference/index.html[Reactor 3 Reference Guide^]

@@ -1,0 +1,164 @@
+= 简介
+
+== 核心接口时序图
+
+核心接口位于 `java.util.concurrent.Flow` 类中(从 java 9 开始)。
+
+核心接口简易时序图如下：
+
+.核心接口时序图
+image::核心接口时序图.png[]
+
+. 客户端调用 `Publisher.subscribe`
+. `Publisher.subscribe` 实现构造  `Subscription` ，然后调用 `Subscriber.onSubscribe`
+. `Subscriber.onSubscribe` 实现调用 `Subscription.request`
+. `Subscription.request` 实现调用 `Subscriber.onNext`
+. `Subscription.request` 实现调用 `Subscriber.onComplete` 或 `Subscriber.onError`
+. `Publisher.subscribe` 返回
+
+NOTE: `Publisher.subscribe` 是一个阻塞方法，其内部可能涉及很多异步操作，但所有异步操作都完成后，此方法才会返回
+
+== 调用流程
+
+从日志看 *reactor* 调用流程：
+
+[source%nowrap,java]
+----
+@Test
+void viewFlowFromLog() {
+    Flux.range(1, 2) //<1>
+            .log("test-1") //<2>
+            .log("test-2")  //<3>
+            .subscribe()  //<4>
+    ;
+    //2020-12-21 15:18:34,023 [Test worker] INFO  test-1.info - | onSubscribe([Synchronous Fuseable] FluxRange.RangeSubscription)
+    //2020-12-21 15:18:34,025 [Test worker] INFO  test-2.info - | onSubscribe([Fuseable] FluxPeekFuseable.PeekFuseableSubscriber)
+    //2020-12-21 15:18:34,026 [Test worker] INFO  test-2.info - | request(unbounded)
+    //2020-12-21 15:18:34,026 [Test worker] INFO  test-1.info - | request(unbounded)
+    //2020-12-21 15:18:34,026 [Test worker] INFO  test-1.info - | onNext(1)
+    //2020-12-21 15:18:34,027 [Test worker] INFO  test-2.info - | onNext(1)
+    //2020-12-21 15:18:34,027 [Test worker] INFO  test-1.info - | onNext(2)
+    //2020-12-21 15:18:34,027 [Test worker] INFO  test-2.info - | onNext(2)
+    //2020-12-21 15:18:34,028 [Test worker] INFO  test-1.info - | onComplete()
+    //2020-12-21 15:18:34,028 [Test worker] INFO  test-2.info - | onComplete()
+}
+----
+<1> 此行表示一个发布者，推送 1、2 两个元素
+<2> 此行既表示一个订阅者，也表示一个发布者。它接收前面发布者的推送，记录日志，然后向下推送消息
+<3> 此行与上面 *test-1* 逻辑相同
+<4> 此行表示一个订阅者，与起始的发布者呼应，仅接收数据，没做处理，所以这里看不到任何输出
+
+NOTE: 从中可以总结出，首为发布者，尾为订阅者，中间既是发布者也是订阅者。
+
+简易调用流程图如下：
+
+.调用流程
+image::调用流程.png[]
+
+因为 *首:发布者* 是一个集合，所以会多次发送数据。
+
+== 简单示例
+
+以下是一个简单的示例：
+
+.SamplePublisher
+[source%nowrap,java]
+----
+@Slf4j
+public class SamplePublisher<T> implements Flow.Publisher<T> {
+
+    private final List<T> items;
+
+    public SamplePublisher(List<T> items) {
+        this.items = Objects.requireNonNull(items);
+    }
+
+    public void subscribe(Flow.Subscriber<? super T> subscriber) {
+        subscriber.onSubscribe(new Flow.Subscription() {
+            private int fromIndex = 0;
+
+            public void request(long l) {
+                if (l < 0) {
+                    subscriber.onError(new IllegalStateException("request count < 0, except > 0"));
+                    return;
+                }
+
+                //请求一批数据
+                int endCount = Math.min(items.size(), fromIndex + (int) l);
+                for (int i = fromIndex; i < endCount; i++) {
+                    subscriber.onNext(items.get(i));
+                }
+
+                //所有数据处理完毕
+                if (endCount >= items.size()) {
+                    subscriber.onComplete();
+                    return;
+                }
+
+                //请求下一批数据
+                fromIndex = endCount;
+                subscriber.onSubscribe(this);
+            }
+
+            public void cancel() {
+                //没用到线程池，此处无用
+            }
+        });
+    }
+}
+----
+
+.LogSubscriber
+[source%nowrap,java]
+----
+public interface LogSubscriber<T> extends Flow.Subscriber<T> {
+
+    Logger log = LoggerFactory.getLogger(LogSubscriber.class);
+
+    default void onNext(T t) {
+        log.info("item: {}", t);
+    }
+
+    default void onError(Throwable throwable) {
+        log.warn("error: {}", throwable.getMessage());
+    }
+
+    default void onComplete() {
+        log.info("complete");
+    }
+}
+----
+
+.测试代码
+[source%nowrap,java]
+----
+@Test
+void subscribe() {
+    List<Integer> integers = IntStream.range(0, 10).boxed().collect(Collectors.toList());
+    SamplePublisher<Integer> publisher = new SamplePublisher<>(integers);
+    publisher.subscribe(new LogSubscriber<>() {
+        private int times = 0;
+
+        public void onSubscribe(Flow.Subscription subscription) {
+            //限流控制
+            times++;
+            log.info("第 {} 次，请求 {} 条记录", times, times * 2);
+            subscription.request(times * 2);
+        }
+    });
+//    2020-12-21 16:15:42,948 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onSubscribe - 第 1 次，请求 2 条记录
+//    2020-12-21 16:15:42,953 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 0
+//    2020-12-21 16:15:42,953 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 1
+//    2020-12-21 16:15:42,954 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onSubscribe - 第 2 次，请求 4 条记录
+//    2020-12-21 16:15:42,954 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 2
+//    2020-12-21 16:15:42,955 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 3
+//    2020-12-21 16:15:42,955 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 4
+//    2020-12-21 16:15:42,955 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 5
+//    2020-12-21 16:15:42,956 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onSubscribe - 第 3 次，请求 6 条记录
+//    2020-12-21 16:15:42,956 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 6
+//    2020-12-21 16:15:42,956 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 7
+//    2020-12-21 16:15:42,957 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 8
+//    2020-12-21 16:15:42,957 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onNext - item: 9
+//    2020-12-21 16:15:42,957 [Test worker] INFO  c.g.p.l.r.sample.LogSubscriber.onComplete - complete
+}
+----

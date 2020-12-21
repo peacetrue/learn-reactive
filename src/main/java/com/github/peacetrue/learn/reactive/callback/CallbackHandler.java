@@ -9,7 +9,7 @@ public interface CallbackHandler<T> {
 
     void onSuccess(T result);
 
-    default void onError(Exception exception) {
+    default void onError(Throwable exception) {
     }
 
     default void onComplete() {
@@ -19,7 +19,7 @@ public interface CallbackHandler<T> {
         new Thread(() -> {
             try {
                 handler.onSuccess(action.get());
-            } catch (Exception exception) {
+            } catch (Throwable exception) {
                 handler.onError(exception);
             } finally {
                 handler.onComplete();

@@ -12,9 +12,13 @@ public class CallbackResult<T> {
 
     private volatile boolean completed;
     private T value;
-    private Exception exception;
+    private Throwable exception;
 
     public boolean isSuccess() {
         return completed && exception == null;
+    }
+
+    public boolean isError() {
+        return completed && exception != null;
     }
 }
