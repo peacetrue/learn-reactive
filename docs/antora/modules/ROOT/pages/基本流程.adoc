@@ -16,8 +16,6 @@ image::核心接口时序图.png[]
 . `Subscription.request` 实现调用 `Subscriber.onComplete` 或 `Subscriber.onError`
 . `Publisher.subscribe` 返回
 
-NOTE: `Publisher.subscribe` 是一个阻塞方法，其内部可能涉及很多异步操作，但所有异步操作都完成后，此方法才会返回
-
 == 调用流程
 
 从日志看 *reactor* 调用流程：

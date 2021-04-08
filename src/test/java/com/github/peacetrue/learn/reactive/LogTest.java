@@ -19,6 +19,14 @@ import java.util.concurrent.CountDownLatch;
 public class LogTest {
 
     @Test
+    void basic() {
+        Mono.just(1)
+                .publishOn(Schedulers.newSingle("log1"))
+                .subscribeOn(Schedulers.single())
+                .subscribe(i -> log.info("i in mono: {}", i));
+    }
+
+    @Test
     void log01() {
         log.info("对比同步和异步日志输出");
         Mono.just(1)//异步代码
