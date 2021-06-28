@@ -20,7 +20,7 @@ image::核心接口时序图.png[]
 
 从日志看 *reactor* 调用流程：
 
-[source%nowrap,java]
+[source,java]
 ----
 @Test
 void viewFlowFromLog() {
@@ -60,7 +60,7 @@ image::调用流程.png[]
 以下是一个简单的示例：
 
 .SamplePublisher
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 public class SamplePublisher<T> implements Flow.Publisher<T> {
@@ -107,7 +107,7 @@ public class SamplePublisher<T> implements Flow.Publisher<T> {
 ----
 
 .LogSubscriber
-[source%nowrap,java]
+[source,java]
 ----
 public interface LogSubscriber<T> extends Flow.Subscriber<T> {
 
@@ -128,7 +128,7 @@ public interface LogSubscriber<T> extends Flow.Subscriber<T> {
 ----
 
 .测试代码
-[source%nowrap,java]
+[source,java]
 ----
 @Test
 void subscribe() {

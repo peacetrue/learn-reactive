@@ -18,7 +18,7 @@
 image::serial.png[]
 
 .吃饭流程涉及的基本方法
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 public class MealProcess {
@@ -57,7 +57,7 @@ public class MealProcess {
 ----
 
 .吃饭流程串行实现
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 class MealProcessTest {
@@ -99,7 +99,7 @@ image::paiallel.png[]
 首先，简单地创建一个回调处理器：
 
 .CallbackHandler
-[source%nowrap,java]
+[source,java]
 ----
 public interface CallbackHandler<T> {
 
@@ -128,7 +128,7 @@ public interface CallbackHandler<T> {
 然后测试吃饭流程：
 
 .paiallelCallback
-[source%nowrap,java]
+[source,java]
 ----
 @Test
 void paiallelCallback() throws Exception {
@@ -162,7 +162,7 @@ void paiallelCallback() throws Exception {
 添加一个回调结果类：
 
 .CallbackHandler
-[source%nowrap,java]
+[source,java]
 ----
 @Data
 @ToString
@@ -181,7 +181,7 @@ public class CallbackResult<T> {
 继续完善上面的测试代码：
 
 .paiallelCallback
-[source%nowrap,java]
+[source,java]
 ----
 @Test
 void paiallelCallback() throws Exception {
@@ -258,7 +258,7 @@ void paiallelCallback() throws Exception {
 首先，声明一个允诺接口：
 
 .Promise
-[source%nowrap,java]
+[source,java]
 ----
 public interface Promise<T> {
 
@@ -270,7 +270,7 @@ public interface Promise<T> {
 当异步操作完成后，开始执行后续操作。
 
 .Promise
-[source%nowrap,java]
+[source,java]
 ----
 public interface Promise<T> {
 
@@ -283,7 +283,7 @@ public interface Promise<T> {
 ----
 
 .PromiseImpl
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 public class PromiseImpl<T> extends CallbackResult<T> implements Promise<T>, CallbackHandler<T> {
@@ -371,7 +371,7 @@ public class PromiseImpl<T> extends CallbackResult<T> implements Promise<T>, Cal
 ----
 
 .PromiseImplTest
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 class PromiseImplTest {
@@ -398,7 +398,7 @@ class PromiseImplTest {
 添加 `zip` 接口，支持两个异步操作都完成后，开始执行后续操作：
 
 .Promise
-[source%nowrap,java]
+[source,java]
 ----
 public interface Promise<T> {
     <V> Promise<Tuple2<T, V>> zip(Promise<V> promise);
@@ -406,7 +406,7 @@ public interface Promise<T> {
 ----
 
 .PromiseImpl
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 public class PromiseImpl<T> extends CallbackResult<T> implements Promise<T>, CallbackHandler<T> {
@@ -441,7 +441,7 @@ public class PromiseImpl<T> extends CallbackResult<T> implements Promise<T>, Cal
 ----
 
 .PromiseImplTest
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 class PromiseImplTest {
@@ -464,7 +464,7 @@ class PromiseImplTest {
 添加 `thenApplyAsync` 接口，支持一个异步操作成功后，开始执行后续异步操作。
 
 .Promise
-[source%nowrap,java]
+[source,java]
 ----
 public interface Promise<T> {
     <V> Promise<V> thenApplyAsync(Function<T, V> function);
@@ -472,7 +472,7 @@ public interface Promise<T> {
 ----
 
 .PromiseImpl
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 public class PromiseImpl<T> extends CallbackResult<T> implements Promise<T>, CallbackHandler<T> {
@@ -486,7 +486,7 @@ public class PromiseImpl<T> extends CallbackResult<T> implements Promise<T>, Cal
 ----
 
 .PromiseImplTest
-[source%nowrap,java]
+[source,java]
 ----
 @Slf4j
 class PromiseImplTest {
